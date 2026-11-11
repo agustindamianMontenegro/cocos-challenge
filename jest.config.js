@@ -27,5 +27,12 @@ const base = {
 module.exports = {
   projects: [
     { ...base, displayName: 'unit', testMatch: ['<rootDir>/src/**/*.spec.ts'] },
+    {
+      ...base,
+      displayName: 'integration',
+      testMatch: ['<rootDir>/test/**/*.e2e-spec.ts'],
+      setupFiles: ['<rootDir>/test/support/setup/test-env.ts'],
+      globalSetup: '<rootDir>/test/support/setup/global-setup.ts',
+    },
   ],
 };
