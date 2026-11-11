@@ -1,0 +1,26 @@
+name: cocos-challenge
+# PostgreSQL para desarrollo y pruebas: `npm run db:up`.
+# Al crear el volumen por primera vez carga database.sql del challenge en `cocos`
+# y crea `cocos_test` (la usan las pruebas de integración, que la recrean en cada corrida).
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cocos-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cocos
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - ./database/database.sql:/docker-entrypoint-initdb.d/01-database.sql:ro
+      - ./docker/postgres/02-test-database.sql:/docker-entrypoint-initdb.d/02-test-database.sql:ro
+      - cocos-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d cocos']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  cocos-db-data:
