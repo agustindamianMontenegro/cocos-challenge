@@ -45,6 +45,7 @@ El challenge pide una API para consultar el portfolio, buscar instrumentos y env
 | Event Sourcing también en las órdenes | Alcanza con el estado actual y la fecha del último cambio; reconstruir cada orden no suma nada. |
 | Control por versión en lugar de bloqueo | Obliga a reintentar y volver a validar; bloquear la cuenta es más directo para este alcance. |
 | FIFO en lugar de precio promedio | Obliga a seguir cada compra por separado y no hay una necesidad que lo justifique. |
+| Responder `4xx` (por ejemplo, `422`) a una orden rechazada | La orden se crea y queda guardada: devolver un error por algo que se registró es contradictorio. El pedido era válido; el rechazo es el resultado de negocio. Además, muchos clientes HTTP tratan cualquier `4xx` como excepción e ignoran el cuerpo, y un reintento no podría distinguir "ya existe y fue rechazada" de "el pedido está mal". Por eso respondemos `201` con `status: REJECTED` y el motivo: el código HTTP habla del pedido y el `status` habla de la orden. |
 | Importar la orden 11 tal cual | Deja una tenencia negativa, sin precio promedio ni valor de mercado que tengan sentido. |
 
 ## 4. Consecuencias
@@ -321,6 +322,7 @@ Los motivos de rechazo posibles son `INSUFFICIENT_FUNDS` (no alcanza la plata) e
 - `400` si faltan campos, se mandan `size` y `amount` juntos, la cantidad no es un entero positivo, el monto da cero acciones o se manda `price` en una MARKET.
 - `404` si no existe el usuario o el instrumento.
 - `409` si el `orderId` ya se usó con otros datos.
+- `409` (`PRICE_UNAVAILABLE`) si el instrumento no tiene cotización: sin último cierre no hay precio al cual ejecutar, y la orden no se guarda. Pasa con IRCP y PGR en los datos del challenge.
 - `5xx` si hay un error técnico: se deshace todo y la orden no queda guardada.
 
 ```mermaid
