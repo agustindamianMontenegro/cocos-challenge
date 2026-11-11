@@ -1,0 +1,128 @@
+# Colección para la extensión REST Client de VS Code (también sirve como referencia con curl).
+# Antes: npm run migrate:legacy && npm run start:dev
+#
+# Los orderId tienen que ser UUIDv7. Reenviar un pedido con el mismo orderId y los mismos
+# datos devuelve 200 con la orden existente; con otros datos, 409. Para una orden nueva,
+# cambiá el orderId (por ejemplo, con `node -e "..."` o cualquier generador de UUIDv7).
+
+@baseUrl = http://localhost:3000
+# UUID fijo de la orden histórica 5 (LIMIT BUY NEW); lo genera la migración.
+@legacyOrder5 = 7b2008a6-dfb1-5188-8b4c-51ebd27b027f
+
+### Portfolio del usuario 1 (después de migrar: $707.100 total, $125.500 comprometidos)
+GET {{baseUrl}}/portfolio/1
+
+### Portfolio de un usuario que no existe -> 404
+GET {{baseUrl}}/portfolio/999
+
+### Buscar instrumentos por ticker
+GET {{baseUrl}}/instruments?search=ypf
+
+### Buscar por parte del nombre (sin distinguir mayúsculas)
+GET {{baseUrl}}/instruments?search=gas
+
+### Búsqueda vacía -> 400
+GET {{baseUrl}}/instruments?search=
+
+### MARKET: compra por cantidad (al último cierre)
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7a-2b6c-7d2e-9a10-5c3e8f7b1a42",
+  "userId": 1,
+  "instrumentId": 47,
+  "side": "BUY",
+  "type": "MARKET",
+  "size": 10
+}
+
+### Reintento del mismo pedido -> 200 con la misma orden (no se ejecuta de nuevo)
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7a-2b6c-7d2e-9a10-5c3e8f7b1a42",
+  "userId": 1,
+  "instrumentId": 47,
+  "side": "BUY",
+  "type": "MARKET",
+  "size": 10
+}
+
+### Mismo orderId con otros datos -> 409 ORDER_ID_CONFLICT
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7a-2b6c-7d2e-9a10-5c3e8f7b1a42",
+  "userId": 1,
+  "instrumentId": 47,
+  "side": "BUY",
+  "type": "MARKET",
+  "size": 11
+}
+
+### MARKET: compra por monto (floor(monto / último cierre))
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7a-3c1d-7e4f-8b20-6d4f9a8c2b53",
+  "userId": 1,
+  "instrumentId": 47,
+  "side": "BUY",
+  "type": "MARKET",
+  "amount": "10000.00"
+}
+
+### MARKET: venta sin acciones suficientes -> 201 con status REJECTED (INSUFFICIENT_SHARES)
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7a-4d2e-7f50-9c31-7e5a0b9d3c64",
+  "userId": 1,
+  "instrumentId": 47,
+  "side": "SELL",
+  "type": "MARKET",
+  "size": 1000
+}
+
+### LIMIT: compra que compromete $2.400 y queda NEW
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7b-1a2b-7c3d-8e40-1f2a3b4c5d6e",
+  "userId": 1,
+  "instrumentId": 54,
+  "side": "BUY",
+  "type": "LIMIT",
+  "size": 10,
+  "price": "240.00"
+}
+
+### Cancelar la LIMIT anterior y liberar lo comprometido
+PATCH {{baseUrl}}/orders/01934f7b-1a2b-7c3d-8e40-1f2a3b4c5d6e/cancel
+
+### Cancelarla de nuevo -> 409 ORDER_NOT_CANCELLABLE
+PATCH {{baseUrl}}/orders/01934f7b-1a2b-7c3d-8e40-1f2a3b4c5d6e/cancel
+
+### Cancelar la LIMIT migrada 5: libera $35.500
+# El UUID de cualquier orden histórica: SELECT id FROM orders WHERE "legacyOrderId" = 5;
+PATCH {{baseUrl}}/orders/{{legacyOrder5}}/cancel
+
+### Pedido inválido: size y amount juntos -> 400 INVALID_ORDER
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "orderId": "01934f7c-5e6f-7a80-9b91-2c3d4e5f6a7b",
+  "userId": 1,
+  "instrumentId": 47,
+  "side": "BUY",
+  "type": "MARKET",
+  "size": 10,
+  "amount": "1000.00"
+}
