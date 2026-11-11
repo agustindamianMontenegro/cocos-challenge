@@ -9,10 +9,11 @@ import { MarketModule } from '@modules/market/market.module';
 import { UnitOfWork } from '@shared/application/ports/out/interfaces/unit-of-work.port';
 import { UNIT_OF_WORK } from '@shared/application/ports/out/tokens';
 import { DataSource } from 'typeorm';
-import { CANCEL_ORDER, PLACE_ORDER } from './application/ports/in/tokens';
+import { CANCEL_ORDER, LIST_ORDERS, PLACE_ORDER } from './application/ports/in/tokens';
 import { OrderRepository } from './application/ports/out/interfaces/order.repository.port';
 import { ORDER_REPOSITORY } from './application/ports/out/tokens';
 import { CancelOrderService } from './application/use-cases/cancel-order.service';
+import { ListOrdersService } from './application/use-cases/list-orders.service';
 import { PlaceOrderService } from './application/use-cases/place-order.service';
 import { OrdersController } from './infrastructure/http/controllers/orders.controller';
 import { TypeOrmOrderRepository } from '@modules/trading/infrastructure/persistence/repositories/typeorm-order.repository';
@@ -41,6 +42,11 @@ type PlaceOrderInjections = [UnitOfWork, OrderRepository, AccountCommandsPort, A
       useFactory: (unitOfWork: UnitOfWork, orders: OrderRepository, accountCommands: AccountCommandsPort) =>
         new CancelOrderService(unitOfWork, orders, accountCommands),
       inject: [UNIT_OF_WORK, ORDER_REPOSITORY, ACCOUNT_COMMANDS],
+    },
+    {
+      provide: LIST_ORDERS,
+      useFactory: (orders: OrderRepository, accountQueries: AccountQueriesPort) => new ListOrdersService(orders, accountQueries),
+      inject: [ORDER_REPOSITORY, ACCOUNT_QUERIES],
     },
   ],
 })

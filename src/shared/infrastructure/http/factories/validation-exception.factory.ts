@@ -5,9 +5,9 @@ const PIPE_MESSAGES: Readonly<Record<string, (field: string) => string>> = {
   whitelistValidation: (field) => `El campo ${field} no está permitido.`,
 };
 
-/** Junta todos los errores de validación en mensajes en español. */
+/** Junta todos los errores de validación en mensajes en español, sin repetir el mismo mensaje. */
 export function validationExceptionFactory(errors: ValidationError[]): BadRequestException {
-  return new BadRequestException({ message: messagesOf(errors, '') });
+  return new BadRequestException({ message: [...new Set(messagesOf(errors, ''))] });
 }
 
 function messagesOf(errors: readonly ValidationError[], parent: string): string[] {

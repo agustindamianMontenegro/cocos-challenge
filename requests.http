@@ -119,6 +119,15 @@ PATCH {{baseUrl}}/orders/01934f7b-1a2b-7c3d-8e40-1f2a3b4c5d6e/cancel
 # El UUID de cualquier orden histórica: SELECT id FROM orders WHERE "legacyOrderId" = 5;
 PATCH {{baseUrl}}/orders/{{legacyOrder5}}/cancel
 
+### Órdenes del usuario 1, de la más reciente a la más antigua (paginadas)
+GET {{baseUrl}}/orders?userId=1
+
+### Solo las LIMIT pendientes, para saber qué se puede cancelar
+GET {{baseUrl}}/orders?userId=1&status=NEW
+
+### Paginar: 2 órdenes por página, segunda página
+GET {{baseUrl}}/orders?userId=1&limit=2&offset=2
+
 ### Pedido inválido: size y amount juntos -> 400 INVALID_ORDER
 POST {{baseUrl}}/orders
 Content-Type: application/json

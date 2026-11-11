@@ -72,7 +72,7 @@ El challenge pide una API para consultar el portfolio, buscar instrumentos y env
 
 | Módulo | De qué se ocupa | Qué no hace |
 |---|---|---|
-| **Trading** | Crear, ejecutar, rechazar y cancelar órdenes. Valida los datos del pedido y las transiciones de estado (`NEW` → `FILLED` / `CANCELLED`). | No calcula saldos. |
+| **Trading** | Crear, ejecutar, rechazar, cancelar y listar órdenes. Valida los datos del pedido y las transiciones de estado (`NEW` → `FILLED` / `CANCELLED`). | No calcula saldos. |
 | **Account** | Cuidar el saldo, lo comprometido, las tenencias y el precio promedio. Decide si alcanzan los recursos y registra los hechos de la cuenta. | No ejecuta órdenes. |
 | **Market** | Buscar instrumentos y dar la última cotización de cada uno. | No toca la cuenta. |
 | **Portfolio** | Juntar el estado de la cuenta con los precios para calcular valores y rendimientos. | No modifica nada; solo lee. |
@@ -85,6 +85,7 @@ flowchart LR
     U --> I[Buscar instrumentos]
     U --> O[Enviar orden MARKET o LIMIT]
     U --> C[Cancelar orden NEW]
+    U --> L[Listar sus órdenes]
 ```
 
 ```mermaid
@@ -485,6 +486,61 @@ sequenceDiagram
     end
 ```
 
+### 6.6 Listar las órdenes de un usuario
+
+**Por qué lo agregamos.** El challenge no lo pide, pero sin él la API queda incompleta en algo básico: el usuario no puede ver sus órdenes ni saber cuáles siguen pendientes. Para cancelar una LIMIT necesita su id, y hoy solo lo conoce porque lo generó al enviarla; si lo pierde, no hay forma de recuperarlo. El portfolio no lo reemplaza: muestra el resultado de las órdenes (saldo, reservas y posiciones), no las órdenes. El modelo ya lo soportaba: la tabla `orders` tiene un índice por (`userId`, `status`), pensado justamente para buscar las pendientes de un usuario.
+
+Devuelve las órdenes de un usuario, de la más reciente a la más antigua, con el mismo formato que el envío y la cancelación. Se puede filtrar por estado y está **paginada con `limit` y `offset`**, igual que la búsqueda de instrumentos (6.2): `limit` va de 1 a 50 (por defecto, 20) y la respuesta incluye `total`. A igual fecha, el id desempata, así las páginas no se superponen. Las órdenes migradas aparecen con su fecha original.
+
+Es solo lectura: no bloquea la cuenta ni abre una transacción.
+
+**Request**
+
+```http
+GET /orders?userId=1&status=NEW&limit=20&offset=0
+```
+
+**Response `200`**
+
+```json
+{
+  "items": [
+    {
+      "id": "ca0eebc9-0cba-507c-b467-810becfbba23",
+      "userId": 1,
+      "instrumentId": 31,
+      "side": "BUY",
+      "type": "LIMIT",
+      "size": 60,
+      "price": "1500.00",
+      "status": "NEW",
+      "rejectionReason": null,
+      "createdAt": "2023-07-13T11:13:20.000Z",
+      "updatedAt": "2023-07-13T11:13:20.000Z"
+    }
+  ],
+  "total": 2,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+Un usuario sin órdenes recibe `items` vacío y `total` 0. **Errores:** `400` si falta `userId`, si `status` no es un estado válido o si la página no es válida (`INVALID_PAGE`); `404` si el usuario no existe.
+
+**Alcance:** igual que el portfolio, sin autenticación cualquiera puede pedir las órdenes de cualquier `userId` (ver Fuera de alcance, sección 9).
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant T as Trading
+    participant A as Account
+    participant DB as PostgreSQL
+    U->>T: GET /orders?userId=1&status=NEW
+    T->>A: ¿Existe el usuario?
+    T->>DB: Órdenes del usuario (página pedida) y total
+    T-->>U: 200 con la página
+```
+
 ## 7. Datos y concurrencia
 
 ### Tablas: antes y después
@@ -573,6 +629,7 @@ Usamos Jest y Supertest contra un PostgreSQL real. Cubrimos:
 - Órdenes MARKET y LIMIT, por cantidad y por monto.
 - Rechazo por falta de saldo y por falta de acciones.
 - Cancelación y liberación de lo comprometido.
+- Listado de órdenes por usuario, con filtro por estado y paginación.
 - Reintento con el mismo `orderId`, con los mismos datos y con datos distintos.
 - Dos compras simultáneas contra el mismo saldo.
 - Que un error técnico deshaga todo.

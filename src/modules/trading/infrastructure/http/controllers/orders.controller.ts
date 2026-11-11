@@ -1,12 +1,15 @@
-import { BadRequestException, Body, Controller, HttpStatus, Inject, Param, ParseUUIDPipe, Patch, Post, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpStatus, Inject, Param, ParseUUIDPipe, Patch, Post, Query, Res } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { CancelOrderUseCase } from '@modules/trading/application/ports/in/interfaces/cancel-order.use-case';
+import { ListOrdersUseCase } from '@modules/trading/application/ports/in/interfaces/list-orders.use-case';
 import { PlaceOrderUseCase } from '@modules/trading/application/ports/in/interfaces/place-order.use-case';
-import { CANCEL_ORDER, PLACE_ORDER } from '@modules/trading/application/ports/in/tokens';
+import { CANCEL_ORDER, LIST_ORDERS, PLACE_ORDER } from '@modules/trading/application/ports/in/tokens';
+import { ListOrdersQueryDto } from '@modules/trading/infrastructure/http/dto/list-orders.query.dto';
+import { OrderPageResponseDto } from '@modules/trading/infrastructure/http/dto/order-page.response.dto';
 import { OrderResponseDto } from '@modules/trading/infrastructure/http/dto/order.response.dto';
 import { PlaceOrderRequestDto } from '@modules/trading/infrastructure/http/dto/place-order.request.dto';
-import { toOrderResponse, toPlaceOrderCommand } from '@modules/trading/infrastructure/http/mappers/order-http.mapper';
+import { toOrderPageResponse, toOrderResponse, toPlaceOrderCommand } from '@modules/trading/infrastructure/http/mappers/order-http.mapper';
 
 const orderIdPipe = new ParseUUIDPipe({
   exceptionFactory: () => new BadRequestException('El id de la orden tiene que ser un UUID.'),
@@ -19,7 +22,17 @@ export class OrdersController {
   constructor(
     @Inject(PLACE_ORDER) private readonly placeOrder: PlaceOrderUseCase,
     @Inject(CANCEL_ORDER) private readonly cancelOrder: CancelOrderUseCase,
+    @Inject(LIST_ORDERS) private readonly listOrders: ListOrdersUseCase,
   ) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Listar las órdenes de un usuario, de la más reciente a la más antigua, con paginación' })
+  @ApiOkResponse({ type: OrderPageResponseDto })
+  @ApiBadRequestResponse({ description: 'Falta userId, el estado no existe o la página no es válida.' })
+  @ApiNotFoundResponse({ description: 'El usuario no existe.' })
+  async list(@Query() query: ListOrdersQueryDto): Promise<OrderPageResponseDto> {
+    return toOrderPageResponse(await this.listOrders.execute(query));
+  }
 
   /**
    * 201 si se creó (FILLED, NEW o REJECTED); 200 si es un reintento con los mismos datos.

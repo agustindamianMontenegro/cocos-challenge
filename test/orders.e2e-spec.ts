@@ -153,6 +153,58 @@ describe('Órdenes', () => {
     });
   });
 
+  describe('Listado', () => {
+    const list = (query: string) => request(app.getHttpServer()).get(`/orders?${query}`);
+
+    it('lista las órdenes del usuario, de la más reciente a la más antigua, con el total', async () => {
+      await accounts.deposit(USER, 100_000);
+      const market = await post(marketBuy()).expect(201);
+      const limit = await post(marketBuy({ type: 'LIMIT', price: '900.00' })).expect(201);
+
+      const response = await list(`userId=${USER}`).expect(200);
+
+      expect(response.body).toMatchObject({ total: 2, limit: 20, offset: 0 });
+      expect(response.body.items.map((o: { id: string }) => o.id)).toEqual([limit.body.id, market.body.id]);
+      expect(response.body.items[0]).toEqual(limit.body);
+    });
+
+    it('filtra por estado y pagina sin superponer páginas', async () => {
+      await accounts.deposit(USER, 100_000);
+      for (let i = 0; i < 3; i++) {
+        await post(marketBuy({ type: 'LIMIT', price: '900.00' })).expect(201);
+      }
+      await post(marketBuy()).expect(201);
+
+      const pending = await list(`userId=${USER}&status=NEW`).expect(200);
+      const first = await list(`userId=${USER}&status=NEW&limit=2`).expect(200);
+      const second = await list(`userId=${USER}&status=NEW&limit=2&offset=2`).expect(200);
+      const ids = (body: { items: { id: string }[] }) => body.items.map((o) => o.id);
+
+      expect(pending.body.total).toBe(3);
+      expect(pending.body.items.every((o: { status: string }) => o.status === 'NEW')).toBe(true);
+      expect([...ids(first.body), ...ids(second.body)]).toEqual(ids(pending.body));
+    });
+
+    it('un usuario sin órdenes recibe una lista vacía', async () => {
+      const response = await list(`userId=${USER}`).expect(200);
+      expect(response.body).toEqual({ items: [], total: 0, limit: 20, offset: 0 });
+    });
+
+    it('404 si el usuario no existe', async () => {
+      const response = await list('userId=999').expect(404);
+      expect(response.body.error.code).toBe('USER_NOT_FOUND');
+    });
+
+    it.each([
+      ['falta userId', '', 'INVALID_REQUEST'],
+      ['el estado no existe', `userId=${USER}&status=PENDING`, 'INVALID_REQUEST'],
+      ['limit fuera de rango', `userId=${USER}&limit=51`, 'INVALID_PAGE'],
+    ])('400 si %s', async (_name, query, code) => {
+      const response = await list(query).expect(400);
+      expect(response.body.error.code).toBe(code);
+    });
+  });
+
   describe('Cancelación', () => {
     it('cancela una LIMIT NEW, libera lo comprometido y actualiza la fecha del último cambio', async () => {
       await accounts.deposit(USER, 10_000);

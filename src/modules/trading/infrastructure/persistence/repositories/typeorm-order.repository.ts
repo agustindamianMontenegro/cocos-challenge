@@ -1,12 +1,15 @@
 import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
 import { DuplicateOrderIdError } from '@modules/trading/application/errors/duplicate-order-id.error';
 import { OrderRepository } from '@modules/trading/application/ports/out/interfaces/order.repository.port';
+import { OrderFilterOptions } from '@modules/trading/application/ports/out/options/order-filter.options';
+import { OrderPageRecord } from '@modules/trading/application/ports/out/records/order-page.record';
 import { ORDER_SIDES, ORDER_STATUSES, ORDER_TYPES, REJECTION_REASONS } from '@modules/trading/domain/constants/order.constants';
 import { Order } from '@modules/trading/domain/entities/order';
 import { OrderId } from '@modules/trading/domain/value-objects/order-id';
 import { CorruptedOrderRecordError } from '@modules/trading/infrastructure/persistence/errors/corrupted-order-record.error';
 import { OrderRow } from '@modules/trading/infrastructure/persistence/rows/order.row';
 import { OrderSchema } from '@modules/trading/infrastructure/persistence/schemas/order.schema';
+import { PageOptions } from '@shared/application/ports/out/options/page.options';
 import { Transaction } from '@shared/application/ports/out/types/transaction.interface';
 import { InstrumentId } from '@shared/domain/value-objects/instrument-id';
 import { Money } from '@shared/domain/value-objects/money';
@@ -25,6 +28,18 @@ export class TypeOrmOrderRepository implements OrderRepository {
     const manager = tx ? asEntityManager(tx) : this.dataSource.manager;
     const row = await manager.findOneBy(OrderSchema, { id: id.value });
     return row ? toOrder(row) : null;
+  }
+
+  /** Usa el índice (userId, status) de orders. A igual fecha, el id desempata para que las páginas no se corran. */
+  async findMany(filter: OrderFilterOptions, page: PageOptions): Promise<OrderPageRecord> {
+    const where = filter.status ? { userId: filter.userId, status: filter.status } : { userId: filter.userId };
+    const [rows, total] = await this.dataSource.manager.findAndCount(OrderSchema, {
+      where,
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: page.limit,
+      skip: page.offset,
+    });
+    return { orders: rows.map(toOrder), total };
   }
 
   async save(tx: Transaction, order: Order): Promise<void> {

@@ -19,4 +19,11 @@ describe('validationExceptionFactory', () => {
       message: ['El campo foo no está permitido.', 'size tiene que ser un entero.', 'El campo parent.child no está permitido.'],
     });
   });
+
+  it('no repite un mensaje que comparten dos restricciones del mismo campo', () => {
+    const message = 'userId es obligatorio y tiene que ser un entero mayor a cero.';
+    const exception = validationExceptionFactory([error('userId', { isInt: message, min: message })]);
+
+    expect(exception.getResponse()).toEqual({ message: [message] });
+  });
 });

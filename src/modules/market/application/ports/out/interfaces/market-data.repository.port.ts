@@ -1,4 +1,4 @@
-import { PageOptions } from '@modules/market/application/ports/out/options/page.options';
+import { PageOptions } from '@shared/application/ports/out/options/page.options';
 import { InstrumentSearchRecord } from '@modules/market/application/ports/out/records/instrument-search.record';
 import { Instrument } from '@modules/market/domain/types/instrument.interface';
 import { Quote } from '@modules/market/domain/value-objects/quote';

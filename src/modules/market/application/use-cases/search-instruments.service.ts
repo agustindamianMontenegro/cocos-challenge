@@ -3,7 +3,7 @@ import { SearchInstrumentsCommand } from '@modules/market/application/ports/in/c
 import { SearchInstrumentsUseCase } from '@modules/market/application/ports/in/interfaces/search-instruments.use-case';
 import { InstrumentPageResult } from '@modules/market/application/ports/in/results/instrument-page.result';
 import { MarketDataRepository } from '@modules/market/application/ports/out/interfaces/market-data.repository.port';
-import { resolvePage } from '@modules/market/application/services/page';
+import { resolvePage } from '@shared/application/services/page';
 import { InvalidSearchError } from '@modules/market/domain/errors/invalid-search.error';
 
 export class SearchInstrumentsService implements SearchInstrumentsUseCase {

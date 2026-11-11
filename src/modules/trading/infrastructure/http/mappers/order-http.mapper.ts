@@ -1,5 +1,7 @@
 import { PlaceOrderCommand } from '@modules/trading/application/ports/in/commands/place-order.command';
+import { OrderPageResult } from '@modules/trading/application/ports/in/results/order-page.result';
 import { OrderView } from '@modules/trading/application/ports/in/views/order.view';
+import { OrderPageResponseDto } from '@modules/trading/infrastructure/http/dto/order-page.response.dto';
 import { OrderResponseDto } from '@modules/trading/infrastructure/http/dto/order.response.dto';
 import { PlaceOrderRequestDto } from '@modules/trading/infrastructure/http/dto/place-order.request.dto';
 import { Money } from '@shared/domain/value-objects/money';
@@ -26,4 +28,8 @@ export function toOrderResponse(view: OrderView): OrderResponseDto {
     createdAt: view.createdAt.toISOString(),
     updatedAt: view.updatedAt.toISOString(),
   };
+}
+
+export function toOrderPageResponse(page: OrderPageResult): OrderPageResponseDto {
+  return { items: page.items.map(toOrderResponse), total: page.total, limit: page.limit, offset: page.offset };
 }

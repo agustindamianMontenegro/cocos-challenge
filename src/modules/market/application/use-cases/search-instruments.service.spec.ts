@@ -1,4 +1,4 @@
-import { InvalidPageError } from '@modules/market/domain/errors/invalid-page.error';
+import { InvalidPageError } from '@shared/domain/errors/invalid-page.error';
 import { InvalidSearchError } from '@modules/market/domain/errors/invalid-search.error';
 import { formatPercent } from '@shared/domain/services/percentage';
 import { InMemoryMarketDataRepository } from '@test/support/doubles/in-memory-market-data.repository';

@@ -1,5 +1,5 @@
-import { PageOptions } from '@modules/market/application/ports/out/options/page.options';
-import { InvalidPageError } from '@modules/market/domain/errors/invalid-page.error';
+import { PageOptions } from '@shared/application/ports/out/options/page.options';
+import { InvalidPageError } from '@shared/domain/errors/invalid-page.error';
 
 /** Resultados por página si el cliente no indica limit. */
 export const DEFAULT_PAGE_SIZE = 20;

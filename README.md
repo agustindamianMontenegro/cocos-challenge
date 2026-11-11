@@ -43,6 +43,7 @@ Las próximas veces alcanza con `npm run db:up` (si la base no está corriendo) 
 |---|---|
 | `GET /portfolio/:userId` | Valor total, plata disponible y comprometida, y cada posición con precio promedio, valor actual y resultado. |
 | `GET /instruments?search=texto` | Busca instrumentos por ticker o nombre, con su último precio. Pagina con `limit` y `offset`. |
+| `GET /orders?userId=` | Lista las órdenes de un usuario, de la más reciente a la más antigua. Filtra por `status` y pagina con `limit` y `offset`. |
 | `POST /orders` | Envía una orden MARKET o LIMIT, por cantidad de acciones (`size`) o por monto (`amount`). |
 | `PATCH /orders/:id/cancel` | Cancela una LIMIT pendiente y libera lo que tenía reservado. |
 
@@ -115,7 +116,21 @@ Para pedir la página siguiente, sumá `limit` al `offset`. Una búsqueda sin co
 | `amount` | Monto en pesos a invertir. La API calcula cuántas acciones entran, redondeando hacia abajo. |
 | `price` | Precio límite. Obligatorio en las LIMIT y prohibido en las MARKET. |
 
-**`POST /orders` y `PATCH /orders/:id/cancel` — respuesta**
+**`GET /orders?userId=`**
+
+| Campo | Qué es |
+|---|---|
+| `userId` (query) | Usuario dueño de las órdenes. Obligatorio. |
+| `status` (query) | Solo las órdenes en ese estado: `NEW`, `FILLED`, `REJECTED` o `CANCELLED`. Opcional. |
+| `limit` (query) | Órdenes por página, de 1 a 50. Opcional; por defecto, 20. |
+| `offset` (query) | Cuántas órdenes saltear desde la más reciente. Opcional; por defecto, 0. |
+| `items` | Las órdenes de esta página, con los mismos campos que la respuesta de `POST /orders`. |
+| `total` | Cuántas órdenes cumplen el filtro, sumando todas las páginas. |
+| `limit`, `offset` | La página que se devolvió, con los valores por defecto aplicados. |
+
+Un usuario que no existe responde `404 USER_NOT_FOUND`; uno sin órdenes, `items` vacío y `total` 0.
+
+**`POST /orders`, `PATCH /orders/:id/cancel` y cada orden de `GET /orders` — respuesta**
 
 | Campo | Qué es |
 |---|---|
@@ -185,18 +200,18 @@ trading/
 
 ## Pruebas
 
-Hay 209 pruebas, de dos tipos:
+Hay 225 pruebas, de dos tipos:
 
-**Unitarias (140) — `npm test`.** Prueban la lógica sin base de datos ni servidor, así que corren en un segundo en cualquier máquina. Están junto al código que prueban (`*.spec.ts`) y cubren:
+**Unitarias (149) — `npm test`.** Prueban la lógica sin base de datos ni servidor, así que corren en un segundo en cualquier máquina. Están junto al código que prueban (`*.spec.ts`) y cubren:
 
 - **Reglas de negocio:** saldo, reservas, compras y ventas de la cuenta; precio promedio de compra; estados de una orden; valuación del portfolio y porcentajes; validaciones de los pedidos.
-- **Casos de uso:** enviar y cancelar órdenes, consultar el portfolio, buscar instrumentos y migrar los datos. Usan versiones en memoria de los repositorios (en `test/support/doubles/`) en lugar de la base real.
+- **Casos de uso:** enviar, cancelar y listar órdenes, consultar el portfolio, buscar instrumentos y migrar los datos. Usan versiones en memoria de los repositorios (en `test/support/doubles/`) en lugar de la base real.
 
-**Integración (69) — `npm run test:integration`.** Levantan la API completa y la prueban con pedidos HTTP reales contra PostgreSQL. Están en `test/*.e2e-spec.ts`:
+**Integración (76) — `npm run test:integration`.** Levantan la API completa y la prueban con pedidos HTTP reales contra PostgreSQL. Están en `test/*.e2e-spec.ts`:
 
 | Archivo | Qué prueba |
 |---|---|
-| `orders.e2e-spec.ts` | El envío de órdenes, que es el test funcional que pide el challenge: MARKET y LIMIT, por cantidad y por monto, rechazos por falta de plata o de acciones, cancelación, reintentos y validaciones. Incluye dos compras simultáneas de $80.000 con $100.000 de saldo: una se ejecuta y la otra se rechaza. |
+| `orders.e2e-spec.ts` | El envío de órdenes, que es el test funcional que pide el challenge: MARKET y LIMIT, por cantidad y por monto, rechazos por falta de plata o de acciones, cancelación, listado con filtro y paginación, reintentos y validaciones. Incluye dos compras simultáneas de $80.000 con $100.000 de saldo: una se ejecuta y la otra se rechaza. |
 | `account-repository.e2e-spec.ts` | La cuenta en la base: bloqueo con operaciones simultáneas, fotos periódicas del estado y que un error deshaga toda la transacción. |
 | `migration.e2e-spec.ts` | La migración de las órdenes históricas: el resultado esperado del usuario 1, la corrección de la orden 11 y que se pueda correr dos veces sin duplicar nada. |
 | `portfolio.e2e-spec.ts`, `instruments.e2e-spec.ts` | La valuación del portfolio y la búsqueda con paginación, incluido un instrumento sin cotización. |
