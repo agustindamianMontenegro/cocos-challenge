@@ -68,7 +68,15 @@ Para tener en cuenta:
 
 Los montos y porcentajes van como texto con dos decimales. Un campo en `null` significa que no hay datos para calcularlo (por ejemplo, un instrumento sin cotización): la API no inventa valores.
 
-**`GET /portfolio/:userId`**
+#### `GET /portfolio/:userId`
+
+**Request**
+
+| Parámetro | Dónde | Qué es |
+|---|---|---|
+| `userId` | ruta | Usuario del que se pide el portfolio. Obligatorio. |
+
+**Response `200`**
 
 | Campo | Qué es |
 |---|---|
@@ -86,13 +94,22 @@ Los montos y porcentajes van como texto con dos decimales. Un campo en `null` si
 | `positions[].totalReturnPct` | Resultado de la posición en %: cuánto ganó o perdió respecto de lo que costó (`marketValue / (quantity × averagePrice) − 1`). |
 | `positions[].dailyReturnPct` | Variación diaria del precio en %: último cierre contra el anterior. Es un dato adicional. |
 
-**`GET /instruments?search=texto`**
+Un usuario que no existe responde `404 USER_NOT_FOUND`.
+
+#### `GET /instruments`
+
+**Request**
+
+| Parámetro | Dónde | Qué es |
+|---|---|---|
+| `search` | query | Texto a buscar en el ticker o el nombre, sin distinguir mayúsculas. Obligatorio. |
+| `limit` | query | Resultados por página, de 1 a 50. Opcional; por defecto, 20. |
+| `offset` | query | Cuántos resultados saltear desde el principio. Opcional; por defecto, 0. |
+
+**Response `200`**
 
 | Campo | Qué es |
 |---|---|
-| `search` (query) | Texto a buscar en el ticker o el nombre, sin distinguir mayúsculas. Obligatorio. |
-| `limit` (query) | Resultados por página, de 1 a 50. Opcional; por defecto, 20. |
-| `offset` (query) | Cuántos resultados saltear desde el principio. Opcional; por defecto, 0. |
 | `items` | Los instrumentos de esta página, ordenados por ticker. |
 | `items[].id`, `ticker`, `name`, `type` | El instrumento y su tipo (por ejemplo, `ACCIONES`). |
 | `items[].lastPrice` | Último precio de cierre. |
@@ -103,7 +120,30 @@ Los montos y porcentajes van como texto con dos decimales. Un campo en `null` si
 
 Para pedir la página siguiente, sumá `limit` al `offset`. Una búsqueda sin coincidencias devuelve `items` vacío y `total` 0.
 
-**`POST /orders` — pedido**
+#### `GET /orders`
+
+**Request**
+
+| Parámetro | Dónde | Qué es |
+|---|---|---|
+| `userId` | query | Usuario dueño de las órdenes. Obligatorio. |
+| `status` | query | Solo las órdenes en ese estado: `NEW`, `FILLED`, `REJECTED` o `CANCELLED`. Opcional. |
+| `limit` | query | Órdenes por página, de 1 a 50. Opcional; por defecto, 20. |
+| `offset` | query | Cuántas órdenes saltear desde la más reciente. Opcional; por defecto, 0. |
+
+**Response `200`**
+
+| Campo | Qué es |
+|---|---|
+| `items` | Las órdenes de esta página, de la más reciente a la más antigua. Cada una tiene los campos de [una orden](#una-orden). |
+| `total` | Cuántas órdenes cumplen el filtro, sumando todas las páginas. |
+| `limit`, `offset` | La página que se devolvió, con los valores por defecto aplicados. |
+
+Un usuario que no existe responde `404 USER_NOT_FOUND`; uno sin órdenes, `items` vacío y `total` 0.
+
+#### `POST /orders`
+
+**Request** (body JSON)
 
 | Campo | Qué es |
 |---|---|
@@ -116,21 +156,21 @@ Para pedir la página siguiente, sumá `limit` al `offset`. Una búsqueda sin co
 | `amount` | Monto en pesos a invertir. La API calcula cuántas acciones entran, redondeando hacia abajo. |
 | `price` | Precio límite. Obligatorio en las LIMIT y prohibido en las MARKET. |
 
-**`GET /orders?userId=`**
+**Response:** [una orden](#una-orden). `201` si se creó (`FILLED`, `NEW` o `REJECTED`) y `200` si es un reintento con los mismos datos.
 
-| Campo | Qué es |
-|---|---|
-| `userId` (query) | Usuario dueño de las órdenes. Obligatorio. |
-| `status` (query) | Solo las órdenes en ese estado: `NEW`, `FILLED`, `REJECTED` o `CANCELLED`. Opcional. |
-| `limit` (query) | Órdenes por página, de 1 a 50. Opcional; por defecto, 20. |
-| `offset` (query) | Cuántas órdenes saltear desde la más reciente. Opcional; por defecto, 0. |
-| `items` | Las órdenes de esta página, con los mismos campos que la respuesta de `POST /orders`. |
-| `total` | Cuántas órdenes cumplen el filtro, sumando todas las páginas. |
-| `limit`, `offset` | La página que se devolvió, con los valores por defecto aplicados. |
+#### `PATCH /orders/:id/cancel`
 
-Un usuario que no existe responde `404 USER_NOT_FOUND`; uno sin órdenes, `items` vacío y `total` 0.
+**Request**
 
-**`POST /orders`, `PATCH /orders/:id/cancel` y cada orden de `GET /orders` — respuesta**
+| Parámetro | Dónde | Qué es |
+|---|---|---|
+| `id` | ruta | El `orderId` de la orden a cancelar. Tiene que estar en `NEW`. |
+
+**Response `200`:** [la orden](#una-orden), ahora `CANCELLED`. Si no existe, `404`; si ya no está en `NEW`, `409`.
+
+#### Una orden
+
+Es lo que devuelven `POST /orders` y `PATCH /orders/:id/cancel`, y cada elemento de `items` en `GET /orders`.
 
 | Campo | Qué es |
 |---|---|
