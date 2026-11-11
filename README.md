@@ -42,7 +42,7 @@ Las próximas veces alcanza con `npm run db:up` (si la base no está corriendo) 
 | Endpoint | Qué hace |
 |---|---|
 | `GET /portfolio/:userId` | Valor total, plata disponible y comprometida, y cada posición con precio promedio, valor actual y resultado. |
-| `GET /instruments?search=texto` | Busca instrumentos por ticker o nombre, con su último precio. |
+| `GET /instruments?search=texto` | Busca instrumentos por ticker o nombre, con su último precio. Pagina con `limit` y `offset`. |
 | `POST /orders` | Envía una orden MARKET o LIMIT, por cantidad de acciones (`size`) o por monto (`amount`). |
 | `PATCH /orders/:id/cancel` | Cancela una LIMIT pendiente y libera lo que tenía reservado. |
 
@@ -90,10 +90,17 @@ Los montos y porcentajes van como texto con dos decimales. Un campo en `null` si
 | Campo | Qué es |
 |---|---|
 | `search` (query) | Texto a buscar en el ticker o el nombre, sin distinguir mayúsculas. Obligatorio. |
-| `id`, `ticker`, `name`, `type` | El instrumento y su tipo (por ejemplo, `ACCIONES`). |
-| `lastPrice` | Último precio de cierre. |
-| `previousClose` | Cierre del día anterior. |
-| `dailyReturnPct` | Variación diaria del precio en %. |
+| `limit` (query) | Resultados por página, de 1 a 50. Opcional; por defecto, 20. |
+| `offset` (query) | Cuántos resultados saltear desde el principio. Opcional; por defecto, 0. |
+| `items` | Los instrumentos de esta página, ordenados por ticker. |
+| `items[].id`, `ticker`, `name`, `type` | El instrumento y su tipo (por ejemplo, `ACCIONES`). |
+| `items[].lastPrice` | Último precio de cierre. |
+| `items[].previousClose` | Cierre del día anterior. |
+| `items[].dailyReturnPct` | Variación diaria del precio en %. |
+| `total` | Cuántos instrumentos coinciden en total, sumando todas las páginas. |
+| `limit`, `offset` | La página que se devolvió, con los valores por defecto aplicados. |
+
+Para pedir la página siguiente, sumá `limit` al `offset`. Una búsqueda sin coincidencias devuelve `items` vacío y `total` 0.
 
 **`POST /orders` — pedido**
 
@@ -178,21 +185,21 @@ trading/
 
 ## Pruebas
 
-Hay 199 pruebas, de dos tipos:
+Hay 209 pruebas, de dos tipos:
 
-**Unitarias (135) — `npm test`.** Prueban la lógica sin base de datos ni servidor, así que corren en un segundo en cualquier máquina. Están junto al código que prueban (`*.spec.ts`) y cubren:
+**Unitarias (140) — `npm test`.** Prueban la lógica sin base de datos ni servidor, así que corren en un segundo en cualquier máquina. Están junto al código que prueban (`*.spec.ts`) y cubren:
 
 - **Reglas de negocio:** saldo, reservas, compras y ventas de la cuenta; precio promedio de compra; estados de una orden; valuación del portfolio y porcentajes; validaciones de los pedidos.
 - **Casos de uso:** enviar y cancelar órdenes, consultar el portfolio, buscar instrumentos y migrar los datos. Usan versiones en memoria de los repositorios (en `test/support/doubles/`) en lugar de la base real.
 
-**Integración (64) — `npm run test:integration`.** Levantan la API completa y la prueban con pedidos HTTP reales contra PostgreSQL. Están en `test/*.e2e-spec.ts`:
+**Integración (69) — `npm run test:integration`.** Levantan la API completa y la prueban con pedidos HTTP reales contra PostgreSQL. Están en `test/*.e2e-spec.ts`:
 
 | Archivo | Qué prueba |
 |---|---|
 | `orders.e2e-spec.ts` | El envío de órdenes, que es el test funcional que pide el challenge: MARKET y LIMIT, por cantidad y por monto, rechazos por falta de plata o de acciones, cancelación, reintentos y validaciones. Incluye dos compras simultáneas de $80.000 con $100.000 de saldo: una se ejecuta y la otra se rechaza. |
 | `account-repository.e2e-spec.ts` | La cuenta en la base: bloqueo con operaciones simultáneas, fotos periódicas del estado y que un error deshaga toda la transacción. |
 | `migration.e2e-spec.ts` | La migración de las órdenes históricas: el resultado esperado del usuario 1, la corrección de la orden 11 y que se pueda correr dos veces sin duplicar nada. |
-| `portfolio.e2e-spec.ts`, `instruments.e2e-spec.ts` | La valuación del portfolio y la búsqueda, incluido un instrumento sin cotización. |
+| `portfolio.e2e-spec.ts`, `instruments.e2e-spec.ts` | La valuación del portfolio y la búsqueda con paginación, incluido un instrumento sin cotización. |
 
 Las pruebas de integración usan una base propia (`TEST_DATABASE_URL`, por defecto `cocos_test`) que **se vacía y se recarga en cada corrida**, así que nunca tocan tus datos. Con Docker se crea sola; si no, alcanza con crear una base vacía y apuntar esa variable a ella.
 

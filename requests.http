@@ -21,8 +21,14 @@ GET {{baseUrl}}/instruments?search=ypf
 ### Buscar por parte del nombre (sin distinguir mayúsculas)
 GET {{baseUrl}}/instruments?search=gas
 
+### Paginar: 2 resultados por página, segunda página (total = coincidencias en todas las páginas)
+GET {{baseUrl}}/instruments?search=gas&limit=2&offset=2
+
 ### Búsqueda vacía -> 400
 GET {{baseUrl}}/instruments?search=
+
+### Página inválida (limit fuera de 1 a 50) -> 400 INVALID_PAGE
+GET {{baseUrl}}/instruments?search=gas&limit=100
 
 ### MARKET: compra por cantidad (al último cierre)
 POST {{baseUrl}}/orders

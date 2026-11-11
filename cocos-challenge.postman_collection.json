@@ -119,7 +119,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.test('encuentra YPFD', () => pm.expect(pm.response.json().some((i) => i.ticker === 'YPFD')).to.eql(true));"
+                  "pm.test('encuentra YPFD', () => pm.expect(pm.response.json().items.some((i) => i.ticker === 'YPFD')).to.eql(true));"
                 ]
               }
             }
@@ -154,7 +154,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.test('hay resultados', () => pm.expect(pm.response.json().length > 0).to.eql(true));"
+                  "pm.test('hay resultados', () => pm.expect(pm.response.json().items.length > 0).to.eql(true));"
                 ]
               }
             }
@@ -178,6 +178,91 @@
               ]
             },
             "description": "Coincidencia parcial sobre el nombre."
+          }
+        },
+        {
+          "name": "Paginar resultados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('limit = 2', () => pm.expect(pm.response.json().limit).to.eql(2));",
+                  "pm.test('offset = 2', () => pm.expect(pm.response.json().offset).to.eql(2));",
+                  "pm.test('trae como mucho 2', () => pm.expect(pm.response.json().items.length <= 2).to.eql(true));",
+                  "pm.test('total mayor que la página', () => pm.expect(pm.response.json().total > 2).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/instruments?search=gas&limit=2&offset=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "instruments"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "gas"
+                },
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "offset",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "limit: cuántos resultados por página (1 a 50, por defecto 20). offset: cuántos saltear. total: coincidencias en todas las páginas."
+          }
+        },
+        {
+          "name": "Página inválida → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error.code = INVALID_PAGE', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_PAGE'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/instruments?search=gas&limit=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "instruments"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "gas"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "limit tiene que estar entre 1 y 50."
           }
         },
         {

@@ -206,29 +206,43 @@ sequenceDiagram
 
 Busca por ticker o por nombre, sin distinguir mayúsculas y aceptando coincidencias parciales. Devuelve la última cotización de cada resultado. Los pesos (instrumento `MONEDA`) no aparecen en la búsqueda, porque se muestran como saldo.
 
+Como una búsqueda parcial puede traer muchos resultados, la respuesta está **paginada por `limit` y `offset`**:
+
+- `limit`: resultados por página, de 1 a 50. Por defecto, 20.
+- `offset`: cuántos resultados saltear. Por defecto, 0.
+- Los resultados se ordenan por ticker (y por id si coinciden), así las páginas no se superponen ni saltean resultados.
+- La respuesta incluye `total`, la cantidad de coincidencias en todas las páginas, para que el cliente sepa cuántas páginas hay.
+
+Elegimos `limit`/`offset` y no paginación por cursor porque el catálogo de instrumentos es chico y casi no cambia: con pocos cambios, el riesgo de que una página se corra (el problema que resuelve el cursor) es bajo, y `offset` permite saltar a cualquier página. Si el catálogo creciera mucho o cambiara seguido, convendría pasar a cursor.
+
 **Request**
 
 ```http
-GET /instruments?search=ypf
+GET /instruments?search=ypf&limit=20&offset=0
 ```
 
 **Response `200`**
 
 ```json
-[
-  {
-    "id": 12,
-    "ticker": "YPFD",
-    "name": "YPF S.A.",
-    "type": "ACCIONES",
-    "lastPrice": "18500.00",
-    "previousClose": "18200.00",
-    "dailyReturnPct": "1.65"
-  }
-]
+{
+  "items": [
+    {
+      "id": 12,
+      "ticker": "YPFD",
+      "name": "YPF S.A.",
+      "type": "ACCIONES",
+      "lastPrice": "18500.00",
+      "previousClose": "18200.00",
+      "dailyReturnPct": "1.65"
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0
+}
 ```
 
-Si no hay coincidencias, devuelve una lista vacía. **Errores:** `400` si falta `search` o viene vacío.
+Si no hay coincidencias, devuelve `items` vacío y `total` 0. **Errores:** `400` si falta `search` o viene vacío (`INVALID_SEARCH`), o si `limit` no está entre 1 y 50 u `offset` es negativo (`INVALID_PAGE`).
 
 ```mermaid
 sequenceDiagram
@@ -236,9 +250,9 @@ sequenceDiagram
     participant M as Market
     participant DB as PostgreSQL
     U->>M: GET /instruments?search=ypf
-    M->>DB: Buscar por ticker o nombre
+    M->>DB: Buscar la página pedida y contar el total
     M->>DB: Última cotización de cada resultado
-    M-->>U: Instrumentos con precio
+    M-->>U: Página de instrumentos con precio y total
 ```
 
 ### 6.3 Enviar una orden MARKET

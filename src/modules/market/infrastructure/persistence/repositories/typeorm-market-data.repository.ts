@@ -1,5 +1,7 @@
 import { DataSource, In } from 'typeorm';
 import { MarketDataRepository } from '@modules/market/application/ports/out/interfaces/market-data.repository.port';
+import { PageOptions } from '@modules/market/application/ports/out/options/page.options';
+import { InstrumentSearchRecord } from '@modules/market/application/ports/out/records/instrument-search.record';
 import { CURRENCY_TYPE } from '@modules/market/domain/services/currency';
 import { Instrument } from '@modules/market/domain/types/instrument.interface';
 import { Quote } from '@modules/market/domain/value-objects/quote';
@@ -12,13 +14,19 @@ import { Money } from '@shared/domain/value-objects/money';
  * `lower(x) LIKE lower(término)` equivale a ILIKE y aprovecha los índices
  * trigram sobre lower(ticker) y lower(name).
  */
+const SEARCH_WHERE = `
+  WHERE (lower(ticker) LIKE $1 ESCAPE '\\' OR lower(name) LIKE $1 ESCAPE '\\')
+    AND type IS DISTINCT FROM $2`;
+
+/** Una página de coincidencias, ordenada por ticker (y por id, para que el orden sea estable). */
 const SEARCH_SQL = `
   SELECT id, ticker, name, type
-  FROM instruments
-  WHERE (lower(ticker) LIKE $1 ESCAPE '\\' OR lower(name) LIKE $1 ESCAPE '\\')
-    AND type IS DISTINCT FROM $2
+  FROM instruments ${SEARCH_WHERE}
   ORDER BY ticker, id
-  LIMIT $3`;
+  LIMIT $3 OFFSET $4`;
+
+/** Total de coincidencias, para que el cliente sepa cuántas páginas hay. */
+const COUNT_SQL = `SELECT count(*)::int AS total FROM instruments ${SEARCH_WHERE}`;
 
 /** Última cotización con cierre por instrumento: fecha más reciente y, a igual fecha, id mayor. */
 const LATEST_QUOTES_SQL = `
@@ -32,10 +40,11 @@ const LATEST_QUOTES_SQL = `
 export class TypeOrmMarketDataRepository implements MarketDataRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  async searchInstruments(term: string, limit: number): Promise<Instrument[]> {
+  async searchInstruments(term: string, page: PageOptions): Promise<InstrumentSearchRecord> {
     const pattern = `%${escapeLike(term.toLowerCase())}%`;
-    const rows: InstrumentRow[] = await this.dataSource.query(SEARCH_SQL, [pattern, CURRENCY_TYPE, limit]);
-    return rows.map(toInstrument);
+    const rows: InstrumentRow[] = await this.dataSource.query(SEARCH_SQL, [pattern, CURRENCY_TYPE, page.limit, page.offset]);
+    const [{ total }]: { total: number }[] = await this.dataSource.query(COUNT_SQL, [pattern, CURRENCY_TYPE]);
+    return { instruments: rows.map(toInstrument), total };
   }
 
   async findInstruments(ids: readonly number[]): Promise<Map<number, Instrument>> {
