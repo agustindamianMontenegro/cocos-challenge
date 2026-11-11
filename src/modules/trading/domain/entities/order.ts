@@ -1,12 +1,8 @@
 import { InvalidOrderTransitionError } from '@modules/trading/domain/errors/invalid-order-transition.error';
 import { OrderNotCancellableError } from '@modules/trading/domain/errors/order-not-cancellable.error';
-import { ExecutionOutcome } from '@modules/trading/domain/types/execution-outcome.type';
 import { NewOrder } from '@modules/trading/domain/types/new-order.props';
-import { OrderSide } from '@modules/trading/domain/types/order-side.type';
-import { OrderStatus } from '@modules/trading/domain/types/order-status.type';
-import { OrderType } from '@modules/trading/domain/types/order-type.type';
 import { OrderProps } from '@modules/trading/domain/types/order.props';
-import { RejectionReason } from '@modules/trading/domain/types/rejection-reason.type';
+import { ExecutionOutcome, OrderSide, OrderStatus, OrderType, RejectionReason } from '@modules/trading/domain/types/order.types';
 import { OrderId } from '@modules/trading/domain/value-objects/order-id';
 import { InstrumentId } from '@shared/domain/value-objects/instrument-id';
 import { Money } from '@shared/domain/value-objects/money';

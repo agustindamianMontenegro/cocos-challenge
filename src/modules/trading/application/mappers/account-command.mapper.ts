@@ -1,9 +1,7 @@
 import { AccountCommand } from '@modules/account/application/ports/in/commands/account.command';
 import { AccountCommandResult } from '@modules/account/application/ports/in/results/account-command.result';
 import { Order } from '@modules/trading/domain/entities/order';
-import { ExecutionOutcome } from '@modules/trading/domain/types/execution-outcome.type';
-import { OrderType } from '@modules/trading/domain/types/order-type.type';
-import { TradeSide } from '@modules/trading/domain/types/trade-side.type';
+import { ExecutionOutcome, OrderType, TradeSide } from '@modules/trading/domain/types/order.types';
 
 type CommandFactory = (order: Order) => AccountCommand;
 

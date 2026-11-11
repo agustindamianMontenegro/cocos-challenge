@@ -92,7 +92,7 @@ const CODE = 'ExportNamedDeclaration:has(> :matches(ClassDeclaration, FunctionDe
 /** Cada interfaz o tipo exportado vive en su propio archivo, separado del código. */
 const ONE_TYPE_PER_FILE = {
   files: ['src/**/*.ts'],
-  ignores: ['**/*.spec.ts'],
+  ignores: ['**/*.spec.ts', '**/*.types.ts'],
   rules: {
     'no-restricted-syntax': [
       'error',
@@ -105,12 +105,25 @@ const ONE_TYPE_PER_FILE = {
   },
 };
 
+/** Un `*.types.ts` agrupa uniones y alias chicos: varios tipos, pero ni interfaces ni código. */
+const GROUPED_TYPES = {
+  files: ['src/**/*.types.ts'],
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      { selector: 'TSInterfaceDeclaration', message: 'Un *.types.ts solo agrupa alias de tipo; las interfaces van en su propio archivo.' },
+      { selector: CODE, message: 'Un *.types.ts no lleva código.' },
+    ],
+  },
+};
+
 const ARCHITECTURE = [
   // Base para todo src/ y test/; los bloques por capa la repiten y suman sus reglas.
   { files: ['src/**/*.ts', 'test/**/*.ts'], rules: { 'no-restricted-imports': restrict() } },
   ...MODULE_RULES,
   ...SHARED_RULES,
   ONE_TYPE_PER_FILE,
+  GROUPED_TYPES,
 ];
 
 /**

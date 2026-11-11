@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
 import { ORDER_TYPES, TRADE_SIDES } from '@modules/trading/domain/constants/order.constants';
-import { OrderType } from '@modules/trading/domain/types/order-type.type';
-import { TradeSide } from '@modules/trading/domain/types/trade-side.type';
+import { OrderType, TradeSide } from '@modules/trading/domain/types/order.types';
 
 /** Importe en pesos como texto, con hasta dos decimales. */
 const DECIMAL = /^\d+(\.\d{1,2})?$/;

@@ -1,5 +1,4 @@
-import { OrderType } from '@modules/trading/domain/types/order-type.type';
-import { TradeSide } from '@modules/trading/domain/types/trade-side.type';
+import { OrderType, TradeSide } from '@modules/trading/domain/types/order.types';
 import { Money } from '@shared/domain/value-objects/money';
 
 /** Lo que pide el usuario: cantidad (size) o monto en pesos (amount); price solo en LIMIT. */

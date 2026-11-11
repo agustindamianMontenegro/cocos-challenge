@@ -1,6 +1,5 @@
 import { NewOrder } from '@modules/trading/domain/types/new-order.props';
-import { OrderSide } from '@modules/trading/domain/types/order-side.type';
-import { OrderType } from '@modules/trading/domain/types/order-type.type';
+import { OrderSide, OrderType } from '@modules/trading/domain/types/order.types';
 import { OrderId } from '@modules/trading/domain/value-objects/order-id';
 import { InstrumentId } from '@shared/domain/value-objects/instrument-id';
 import { Money } from '@shared/domain/value-objects/money';

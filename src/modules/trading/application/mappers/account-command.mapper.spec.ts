@@ -1,6 +1,5 @@
 import { Order } from '@modules/trading/domain/entities/order';
-import { OrderSide } from '@modules/trading/domain/types/order-side.type';
-import { OrderType } from '@modules/trading/domain/types/order-type.type';
+import { OrderSide, OrderType } from '@modules/trading/domain/types/order.types';
 import { newOrder } from '@test/support/fixtures/new-order';
 import { ORDER_IDS } from '@test/support/fixtures/order-ids';
 import { accountCommandFor, toExecutionOutcome } from './account-command.mapper';

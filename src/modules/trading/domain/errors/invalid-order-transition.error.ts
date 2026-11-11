@@ -1,4 +1,4 @@
-import { OrderStatus } from '@modules/trading/domain/types/order-status.type';
+import { OrderStatus } from '@modules/trading/domain/types/order.types';
 import { ConflictError } from '@shared/domain/errors/conflict.error';
 
 export class InvalidOrderTransitionError extends ConflictError {
